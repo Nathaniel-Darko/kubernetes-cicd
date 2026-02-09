@@ -10,18 +10,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
       - name: Set lowercase repository name
         id: repo
         shell: bash
         run: echo "repository=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT 
+      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+      
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -47,17 +51,41 @@ jobs:
           git clone https://github.com/nathaniel-darko/grade-api-gitops.git gitops
           cd gitops
           
+          # Update image tag
           if [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s|image: ghcr.io/${{ steps.repo.outputs.repository }}:.*|image: ghcr.io/${{ steps.repo.outputs.repository }}:${{ github.sha }}|g" deployment.yaml
           else
             sed -i "s|image: ghcr.io/${{ steps.repo.outputs.repository }}:.*|image: ghcr.io/${{ steps.repo.outputs.repository }}:${{ github.sha }}|g" deployment.yaml
           fi
           
-          # Commit changes
+          # Configure git
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add deployment.yaml
-          git commit -m "Update image to ${{ github.sha }}"
           
-          # Push
-          git push -f https://${GIT_TOKEN}@github.com/nathaniel-darko/grade-api-gitops.git main
+          # Add changes
+          git add deployment.yaml
+          
+          # Commit only if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit - image tag already up to date"
+            exit 0
+          else
+            git commit -m "Update image to ${{ github.sha }}"
+            git push https://${GIT_TOKEN}@github.com/nathaniel-darko/grade-api-gitops.git main
+          fi
+```
+
+**Key changes:**
+
+1. **Added change detection**: Checks if there are staged changes before committing
+2. **Graceful exit**: If no changes, prints a message and exits successfully (exit 0)
+3. **Removed `-f` flag**: No need to force push unless you have conflicts
+4. **Better error handling**: Won't fail when the deployment is already up to date
+
+**Additional fix for CRLF warning:**
+
+Create a `.gitattributes` file in your `grade-api-gitops` repository:
+```
+* text=auto
+*.yaml text eol=lf
+*.yml text eol=lf
