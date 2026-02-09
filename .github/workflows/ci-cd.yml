@@ -75,17 +75,3 @@ jobs:
           fi
           ```
 
-**Key changes:**
-
-1. **Added change detection**: Checks if there are staged changes before committing
-2. **Graceful exit**: If no changes, prints a message and exits successfully (exit 0)
-3. **Removed `-f` flag**: No need to force push unless you have conflicts
-4. **Better error handling**: Won't fail when the deployment is already up to date
-
-**Additional fix for CRLF warning:**
-
-Create a `.gitattributes` file in your `grade-api-gitops` repository:
-```
-* text=auto
-*.yaml text eol=lf
-*.yml text eol=lf
