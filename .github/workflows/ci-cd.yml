@@ -73,7 +73,7 @@ jobs:
             git commit -m "Update image to ${{ github.sha }}"
             git push https://${GIT_TOKEN}@github.com/nathaniel-darko/grade-api-gitops.git main
           fi
-```
+          ```
 
 **Key changes:**
 
